@@ -35,13 +35,13 @@ class EncodingMixin(object):
 
     def send_cmd(self, prefix, command, args):
         return super(EncodingMixin, self).send_cmd(
-            prefix and self._encode_seq(prefix),
+            prefix and prefix.encode(self.encoding),
             command.encode("ascii"),
             args and self._encode_seq(args))
 
     def recv_cmd(self, prefix, command, args):
         return super(EncodingMixin, self).recv_cmd(
-            prefix and self._decode_seq(prefix),
+            prefix and prefix.decode(self.encoding),
             command.decode("ascii"),
             args and self._decode_seq(args))
 

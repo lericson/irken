@@ -1,34 +1,39 @@
 """IRC parser."""
 
-import re
+from irken.nicks import Mask
 
-# Strips off the prefix.
-prefixed_line_re = re.compile(
-    r"^:(?P<nickname>[^! ]+?)"
-    r"(?:!(?P<username>[^@ ]+?)"
-    r"(?:@(?P<hostname>[^ ]+?))?)? (?P<remainder>.+)$")
+def parse_line(line, mask_maker=Mask.from_string):
+    """Parse an IRC line, returning `(source, command, arguments)`.
+    
+    *source* is either None or a mask instance from *mask_maker*, if a prefix
+    was given in the line.
 
-def parse_line(line):
-    """Returns (source, command, arguments) where source can be None or
-    a NickMask. arguments is a list of arguments, and can be empty.
+    *command* is the IRC command specified in the line and is normalized to
+    uppercase.
+    
+    *argument*s is a list of command arguments, and is the empty list if none
+    were given.
+
+    Note that this function shouldn't be given unicode instances, as the IRC
+    protocol doesn't define any encoding and so works with byte streams rather
+    than abstract text -- meaning `str` instances. That said, the result can be
+    decoded safely if the encoding is known.
 
     >>> parse_line("HELLO")
     (None, 'HELLO', [])
     >>> parse_line(":Hello!world@example.net QUIT :Bored.")
-    (('Hello', 'world', 'example.net'), 'QUIT', ['Bored.'])
+    (Mask(ByteNickname('Hello'), 'world', 'example.net'), 'QUIT', ['Bored.'])
     >>> parse_line("PING ABC")
     (None, 'PING', ['ABC'])
     >>> parse_line("TEST :Hello :World :Bar")
     (None, 'TEST', ['Hello :World :Bar'])
     >>> parse_line(":Kidney@example.net SVERIGE ABC")
-    (('Kidney@example.net', None, None), 'SVERIGE', ['ABC'])
+    (Mask(ByteNickname('Kidney@example.net')), 'SVERIGE', ['ABC'])
     """
 
-    prefix_mo = prefixed_line_re.search(line)
-    if prefix_mo:
-        stuff = prefix_mo.groups()
-        source = stuff[:3]
-        line = stuff[3]
+    if line.startswith(":"):
+        prefix, line = line[1:].split(" ", 1)
+        source = mask_maker(prefix)
     else:
         source = None
 
@@ -51,30 +56,13 @@ def parse_line(line):
     else:
         command = line
 
-    return source, command, arguments
-
-def parse_lines(data):
-    """Parses out all lines in data, returning an iterator of the lines
-    that were parsed as well as the remnant data that wasn't a complete
-    line.
-
-    >>> parse_lines('HELLO\\nWorld.')[1]
-    'World.'
-    >>> parse_lines('')[1]
-    ''
-    >>> parse_lines('TEST\\nHELLO\\nWORLD\\n')[1]
-    ''
-    >>> parse_lines('TEST\\n\\nFOO\\nIncomplete')[1]
-    'Incomplete'
-    """
-
-    lines = data.replace("\r\n", "\n").replace("\r", "\n").split("\n")
-    data = lines.pop()
-    return (parse_line(line) for line in lines if line), data
+    return source, command.upper(), arguments
 
 def build_line(source, command, arguments):
-    """Builds an IRC line from a prefix, command and arguments. See parse_line
-    for a definition of what they can be.
+    """Build an IRC line from *prefix*, *command* and *arguments*.
+
+    It is the inverse of *parse_line*, see that function's documentation for
+    more information.
 
     >>> build_line(None, 'PING', ('World',))
     'PING World'
@@ -88,15 +76,7 @@ def build_line(source, command, arguments):
 
     r = ""
     if source:
-        n_parts = len(source)
-        r += ":" + source[0]
-        if 3 >= n_parts >= 2:
-            r += "!" + source[1]
-            if n_parts == 3:
-                r += "@" + source[2]
-        elif n_parts > 3:
-            raise ValueError(source)
-        r += " "
+        r += ":%s " % (source.to_string(),)
     r += command
     if arguments:
         r += " "

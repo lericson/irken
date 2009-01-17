@@ -82,7 +82,17 @@ special_lc = "[]\\"
 special_uc = "{}|"
 
 def is_valid_nickname(nick):
-    """Loosely check if *nick* is a valid nickname."""
+    r"""Loosely check if *nick* is a valid nickname.
+    
+    >>> is_valid_nickname("foo")
+    True
+    >>> is_valid_nickname("foo bar")
+    False
+    >>> is_valid_nickname("foo\xff")
+    True
+    >>> is_valid_nickname("foo\0")
+    False
+    """
     return bool(nick) and not any(ord(c) <= 32 for c in nick)
 
 class BaseNickname(basestring):
@@ -138,10 +148,144 @@ class UniNickname(BaseNickname, unicode):
     _swapc = dict(_lc_uc, **_uc_lc)
 
 def nickname(val):
-    if isinstance(val, str):
+    """Convert *val* to a suitable nickname instance.
+
+    >>> nickname("foo")
+    ByteNickname('foo')
+    >>> nickname(u"foo")
+    UniNickname(u'foo')
+    >>> nickname(nickname('foo'))
+    ByteNickname('foo')
+    """
+    if isinstance(val, BaseNickname):
+        return val
+    elif isinstance(val, str):
         return ByteNickname(val)
     else:
         return UniNickname(val)
+
+class Mask(tuple):
+    r"""IRC mask.
+
+    The mask must consist of at least a nickname, as is required to be useful
+    at all. If a host is to be given, so must a username be.
+
+    The nickname is converted into a suitable nickname instance using the
+    `nickname` function.
+
+    >>> m = Mask("foo")
+    >>> m
+    Mask(ByteNickname('foo'))
+    >>> m.nick
+    ByteNickname('foo')
+
+    >>> m = Mask("foo", "bar", "baz")
+    >>> m
+    Mask(ByteNickname('foo'), 'bar', 'baz')
+    >>> m.user, m.host
+    ('bar', 'baz')
+
+    >>> Mask("foo", host="baz")
+    Traceback (most recent call last):
+      ...
+    TypeError: user must be given if host is
+
+    The mask type also provides two utility methods for converting to and from
+    the IRC mask representation::
+
+        >>> Mask.from_string("foo!bar@baz")
+        Mask(ByteNickname('foo'), 'bar', 'baz')
+        >>> Mask.from_string(u"foo!bar@baz")
+        Mask(UniNickname(u'foo'), u'bar', u'baz')
+        >>> Mask("foo", "bar", "baz").to_string()
+        'foo!bar@baz'
+        >>> Mask(u"foo", u"bar", u"baz").to_string()
+        u'foo!bar@baz'
+
+    The parser even handles weird masks correctly::
+
+        >>> # Not so weird - just has no host.
+        >>> Mask.from_string("foo!bar")
+        Mask(ByteNickname('foo'), 'bar')
+        >>> # A little weirder, seemingly has no username but really only has
+        >>> # nickname.
+        >>> Mask.from_string("foo@baz")
+        Mask(ByteNickname('foo@baz'))
+        >>> # This actually has a weird nickname, and not any host at all.
+        >>> Mask.from_string("foo@bar!baz")
+        Mask(ByteNickname('foo@bar'), 'baz')
+
+    As a matter of fact, it even does encoding and decoding::
+
+        >>> Mask.from_string(u"\xe5bc").encode("utf-8")
+        Mask(ByteNickname('\xc3\xa5bc'))
+        >>> Mask.from_string("\xc3\xa5bc").decode("utf-8")
+        Mask(UniNickname(u'\xe5bc'))
+
+    Comparison works the way you'd expect it to, that is, it compares only the
+    parts that are present in both masks::
+
+        >>> mx = Mask.from_string("lericson")
+        >>> my = Mask.from_string("lericson!lericson")
+        >>> mx == my
+        True
+        >>> my = Mask.from_string("vishnu!lericson")
+        >>> mx == my
+        False
+    """
+
+    def __new__(cls, nick, user=None, host=None):
+        if host and not user:
+            raise TypeError("user must be given if host is")
+        return super(Mask, cls).__new__(cls, (nick, user, host))
+
+    def __init__(self, nick, user=None, host=None):
+        super(Mask, self).__init__((nick, user, host))
+        self.nick = nickname(nick)
+        self.user = user
+        self.host = host
+
+    def __eq__(self, other):
+        for c1, c2 in zip(self, other):
+            if None in (c1, c2):
+                break
+            elif c1 != c2:
+                return False
+        return True
+
+    def __repr__(self):
+        parts = self.nick, self.user, self.host
+        args = ", ".join(repr(part) for part in parts if part)
+        return "%s(%s)" % (self.__class__.__name__, args)
+
+    @classmethod
+    def from_string(cls, val):
+        args = ()
+        for delim in "!@":
+            if delim in val:
+                part, val = val.split(delim, 1)
+                args += (part,)
+            else:
+                break
+        args += (val,)
+        return cls(*args)
+
+    def to_string(self):
+        mapping = (("", self.nick),
+                   ("!", self.user),
+                   ("@", self.host))
+        rv = ""
+        for preceder, part in mapping:
+            if part:
+                rv += preceder + part
+        return rv
+
+    __str__ = __unicode__ = to_string
+
+    def encode(self, coding, errors="strict"):
+        return self.__class__.from_string(self.to_string().encode(coding))
+    def decode(self, coding, errors="strict"):
+        return self.__class__.from_string(self.to_string().decode(coding))
 
 if __name__ == "__main__":
     import doctest

@@ -1,5 +1,6 @@
 import logging
 from irken import UnhandledCommandError
+from irken.nicks import Mask
 from types import MethodType
 
 logger = logging.getLogger("irken.dispatch")
@@ -19,43 +20,39 @@ class DispatchRegisteringType(type):
     """
 
     def __new__(cls, name, bases, attrs):
+        # We create a new base_evtable based on the one base classae's.
         evtable = attrs.setdefault("base_evtable", {})
-        attr_names = attrs.keys()
+        for base in bases:
+            if hasattr(base, "base_evtable"):
+                evtable.update(base.base_evtable)
         super_cls = super(DispatchRegisteringType, cls)
         new_cls = super_cls.__new__(cls, name, bases, attrs)
-        for attr_name in attr_names:
-            attr = getattr(new_cls, attr_name)
-            if callable(attr) and hasattr(attr, "handles_commands"):
-                for cmd in attr.handles_commands:
+        for attr in vars(new_cls):
+            # We must use getattr to trigger the property machinery that gives
+            # us unbound methods and that.
+            val = getattr(new_cls, attr)
+            if hasattr(val, "handles_commands"):
+                for cmd in val.handles_commands:
                     evtable.setdefault(cmd.lower(), []).append(attr)
         return new_cls
 
 class DispatchRegistering(object):
     """Base class for dispatch registering.
 
-    Takes the event table from the type and updates it with instance-specific
-    modifications (given as the `evtable` kwarg at construction.)
-
-    It also converts unbound methods to bound, so that there's one single call
-    structure to use.
+    Takes the event table from the class and updates it with instance-specific
+    modifications, that is, the keyworg argument *evtable*.
     """
 
     __metaclass__ = DispatchRegisteringType
 
     def __init__(self, *args, **kwds):
-        evtable = self.base_evtable.copy()
-        if "evtable" in kwds:
-            evtable.update(kwds.pop("evtable"))
-        for cmd, handlers in evtable.iteritems():
-            for idx, handler in enumerate(handlers):
-                if isinstance(handler, MethodType):
-                    handlers[idx] = MethodType(handler, self, self.__class__)
-        self.evtable = evtable
-        super(DispatchRegistering, self).__init__(*args, **kwds)
+        self.evtable = evtable = self.base_evtable.copy()
+        self.evtable.update(kwds.pop("evtable", {}))
+        return super(DispatchRegistering, self).__init__(*args, **kwds)
 
-    def dispatch(self, command, *args, **kwds):
-        for handler in self.evtable.get(command.lower(), ()):
-            yield handler(*args, **kwds)
+    def handlers_for(self, command):
+        for handler_attr in self.evtable.get(command.lower(), ()):
+            yield getattr(self, handler_attr)
 
 # irken mixins
 
@@ -64,25 +61,26 @@ class SimpleDispatchMixin(DispatchRegistering):
 
     def recv_cmd(self, prefix, command, args):
         numeric = command.isdigit() and len(command) == 3
-        handlers = self.evtable.get(command.lower())
+        handlers = self.handlers_for(command)
         # Select default handler if necessary.
         if not handlers:
             if numeric:
                 handlers = (self.handle_default_numeric,)
             else:
                 handlers = (self.handle_default_command,)
+        info = dict(source=prefix, command=command)
         for handler in handlers:
             try:
-                handler(prefix, args)
+                handler(info, *args)
             except:
                 self.handle_error()
 
     # Non-fatal if numeric.
-    def handle_default_numeric(self, numeric, prefix=None, *args):
-        logger.info("unhandled numeric %s", numeric)
+    def handle_default_numeric(self, info, *args):
+        logger.info("unhandled numeric %s", info["command"])
     # Fatal if non-numeric.
-    def handle_default_command(self, prefix, args):
-        raise UnhandledCommandError(command)
+    def handle_default_command(self, info, *args):
+        raise UnhandledCommandError(info["command"])
 
     def handle_error(self):
         logger.exception("command dispatch")
@@ -90,16 +88,16 @@ class SimpleDispatchMixin(DispatchRegistering):
 class CommonDispatchMixin(SimpleDispatchMixin):
     """Redispatches rawer calls into more useful ones."""
 
-    @handler("privmsg")
-    def on_privmsg(self, prefix, args):
-        pass
+    # TODO Complete.
+    #@handler("privmsg")
+    #def on_privmsg(self, cmd, target, text):
+    #    pass
 
     @handler("nick")
-    def on_nick(self, prefix, args):
-        new_nick, = args
-        if self.nick == nickname(prefix[0]):
+    def update_own_nick(self, cmd, new_nick):
+        if cmd["source"] is self:
             self._nick = new_nick
 
     @handler("ping")
-    def on_ping(self, prefix, args):
+    def reply_to_ping(self, cmd, *args):
         self.send_cmd(None, "PONG", args)
