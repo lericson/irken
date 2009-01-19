@@ -101,24 +101,32 @@ class DispatchingTest(TestConnection):
     def connect(self, addr): pass
 
     @handler("privmsg", "notice")
-    def on_text(self, cmd, target, text):
+    def do_hypothetical_operation(self, cmd, target, text):
         self.called.append((1, cmd, target, text))
     @handler("privmsg", "notice")
-    def on_text2(self, cmd, target, text):
+    def do_hipogriph(self, cmd, target, text):
         self.called.append((2, cmd, target, text))
 
 class DispatchingTestCase(IrkenTestCase):
     irken_cls = DispatchingTest
 
-    def test_multi_dispatch(self):
+    def test_multi_dispatch_privmsg(self):
         m = Mask.from_string
         self.conn.recv_cmd(m("lericson"), "privmsg",
                            ("#toxik.fanclub", "Hello world!"))
+        self.conn.called.sort()
         self.assertEquals(self.conn.called,
-            [(2, {'source': m("lericson"), 'command': 'privmsg'},
-                 '#toxik.fanclub', 'Hello world!'),
-             (1, {'source': m("lericson"), 'command': 'privmsg'},
-                 '#toxik.fanclub', 'Hello world!')])
+            [(1, {"source": m("lericson"), "command": "privmsg"},
+                 "#toxik.fanclub", "Hello world!"),
+             (2, {"source": m("lericson"), "command": "privmsg"},
+                 "#toxik.fanclub", "Hello world!")])
+
+    def test_multi_dispatch_notice(self):
+        self.conn.recv_cmd(None, "NOTICE", ("foo", "bar"))
+        self.conn.called.sort()
+        self.assertEquals(self.conn.called,
+            [(1, {"source": None, "command": "NOTICE"}, "foo", "bar"),
+             (2, {"source": None, "command": "NOTICE"}, "foo", "bar")])
 
 if __name__ == "__main__":
     unittest.main()
