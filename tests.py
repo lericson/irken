@@ -97,9 +97,6 @@ class DispatchingTest(TestConnection):
         super(DispatchingTest, self).__init__(*args, **kwds)
         self.called = []
 
-    def close(self): pass
-    def connect(self, addr): pass
-
     @handler("privmsg", "notice")
     def do_hypothetical_operation(self, cmd, target, text):
         self.called.append((1, cmd, target, text))
