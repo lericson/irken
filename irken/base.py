@@ -8,7 +8,8 @@ class BaseConnection(object):
     """Very basic connection.
 
     This essentially knows how to parse IRC data and build lines. It doesn't
-    know how to send, or how to dispatch, or anything like it.
+    know /how/ to send, or how to dispatch, and so on, but it does know that
+    it should send etc.
     """
 
     def __init__(self, nick):
@@ -60,6 +61,9 @@ class BaseConnection(object):
 
     def run_forever(self):
         while True: self.run_once()
+
+# The distinction between BaseConnection and Connection lies in that the
+# base itself doesn't know any specifics.
 
 class Connection(BaseConnection):
     def _set_nick(self, value):
