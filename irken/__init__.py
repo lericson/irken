@@ -6,8 +6,9 @@ from irken.dispatch import CommonDispatchMixin
 from irken.encoding import EncodingMixin
 from irken.io import SimpleSocketMixin
 from irken.utils import AutoRegisterMixin
+from irken.ctcp import CTCPDispatchMixin
 
-class Connection(AutoRegisterMixin, EncodingMixin, SimpleSocketMixin,
-                 CommonDispatchMixin, BaseConnection): pass
+class Connection(CTCPDispatchMixin, AutoRegisterMixin, EncodingMixin,
+                 SimpleSocketMixin, CommonDispatchMixin, BaseConnection): pass
 
 from logging import basicConfig as logging, DEBUG as LOG_DEBUG
