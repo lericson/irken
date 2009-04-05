@@ -15,7 +15,7 @@ class ExampleBot(irken.Connection):
     @handler("privmsg")
     def count_message_direction(self, cmd, target_name, text):
         src = cmd.source
-        target = self.lookup_prefix(target_name)
+        target = self.lookup_prefix((target_name,))
         count = src.msg_counts.get(target, -1)
         src.msg_counts[target] = count = count + 1
         if self == target:
