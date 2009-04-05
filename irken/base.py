@@ -14,6 +14,22 @@ class BaseConnection(object):
 
     def __init__(self, nick):
         self.nick = nick
+        self._prefix_cache = {}
+
+    def _set_nick(self, value):
+        value = nickname(value)
+        if hasattr(self, "_nick"):
+            if value != self.nick:
+                self.send_cmd(None, "NICK", (value,))
+        else:
+            self._nick = value
+    def _get_nick(self): return getattr(self, "_nick", "*")
+    nick = property(_get_nick, _set_nick)
+
+    def __eq__(self, other):
+        if hasattr(other, "nick"):
+            return self.nick == other.nick
+        return NotImplemented
 
     def parse_line(self, line):
         return parse_line(line)
@@ -42,6 +58,12 @@ class BaseConnection(object):
         """Read raw IRC data."""
         raise NotImplementedError("io mixin")
 
+    def run_once(self):
+        self.recv_raw()
+
+    def run_forever(self):
+        while True: self.run_once()
+
     def consume(self, data):
         """Consume every line in string *data*, returning any incomplete data
         found.
@@ -56,22 +78,40 @@ class BaseConnection(object):
             self.recv_cmd(*self.parse_line(line))
         return trail
 
-    def run_once(self):
-        self.recv_raw()
+    def lookup_prefix(self, prefix):
+        """Turn *prefix* into an actual source with similar behavior to this
+        instance itself.
 
-    def run_forever(self):
-        while True: self.run_once()
+        This default implementation does nothing smart, it's more of a factory
+        with a cache than anything else. (Which means it wastes memory, yeah.)
 
-# The distinction between BaseConnection and Connection lies in that the
-# base itself doesn't know any specifics.
+        >>> bc = BaseConnection("self")
+        >>> bc.lookup_prefix(("other",))
+        <RemoteSource 'other'>
+        >>> bc.lookup_prefix(("self",))  # doctest: +ELLIPSIS
+        <__main__.BaseConnection object at ...>
+        >>> bc.lookup_prefix(("#im.a.channel",))
+        <RemoteSource '#im.a.channel'>
+        """
+        # TODO There really should be some eviction strategy for entries in the
+        # cache, but hey... Realistically, I can leak that memory.
+        cache = self._prefix_cache
+        key = prefix[0] if prefix else prefix
+        if key == self.nick:
+            return self
+        if key not in cache:
+            value = cache[key] = self.make_source(prefix)
+            return value
+        return cache[key]
 
-class Connection(BaseConnection):
-    def _set_nick(self, value):
-        value = nickname(value)
-        if hasattr(self, "_nick"):
-            if value != self.nick:
-                self.send_cmd(None, "NICK", (value,))
-        else:
-            self._nick = value
-    def _get_nick(self): return getattr(self, "_nick", "*")
-    nick = property(_get_nick, _set_nick)
+    def make_source(self, prefix):
+        return RemoteSource(prefix)
+
+class RemoteSource(object):
+    def __init__(self, prefix):
+        self.nick = prefix[0] if prefix else prefix
+    def __repr__(self): return "<RemoteSource %r>" % (self.nick,)
+
+if __name__ == "__main__":
+    import doctest
+    doctest.testmod()
