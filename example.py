@@ -23,7 +23,7 @@ class ExampleBot(irken.Connection):
         source.msg_counts = {}
         return source
 
-    @handler("privmsg")
+    @handler("irc cmd privmsg")
     def count_message_direction(self, cmd, target_name, text):
         src = cmd.source
         target = self.lookup_prefix((target_name,))

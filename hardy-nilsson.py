@@ -22,7 +22,7 @@ class HardyNilsson(irken.Connection):
             rv += " (master is %s)" % rev
         return rv
 
-    @handler("privmsg")
+    @handler("irc cmd privmsg")
     def say_html_title(self, cmd, target_name, text):
         reply_to = self.lookup_prefix((target_name,))
         if reply_to == self:
