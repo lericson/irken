@@ -9,3 +9,5 @@ from irken.utils import AutoRegisterMixin
 
 class Connection(AutoRegisterMixin, EncodingMixin, SimpleSocketMixin,
                  CommonDispatchMixin, Connection): pass
+
+from logging import basicConfig as logging, DEBUG as LOG_DEBUG
