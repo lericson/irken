@@ -54,6 +54,18 @@ class DispatchRegistering(object):
         for handler_attr in self.evtable.get(command.lower(), ()):
             yield getattr(self, handler_attr)
 
+class Command(unicode):
+    def __new__(cls, command, source=None):
+        return super(Command, cls).__new__(cls, command)
+    
+    def __init__(self, command, source=None):
+        super(Command, self).__init__(command)
+        self.source = source
+
+    def __repr__(self):
+        r = super(Command, self).__repr__()
+        return self.__class__.__name__ + "(%s, source=%r)" % (r, self.source)
+
 # irken mixins
 
 class SimpleDispatchMixin(DispatchRegistering):
@@ -68,7 +80,8 @@ class SimpleDispatchMixin(DispatchRegistering):
                 handlers = (self.handle_default_numeric,)
             else:
                 handlers = (self.handle_default_command,)
-        info = dict(source=prefix, command=command)
+        
+        info = Command(command, source=self.lookup_prefix(prefix))
         for handler in handlers:
             try:
                 handler(info, *args)
@@ -88,14 +101,18 @@ class SimpleDispatchMixin(DispatchRegistering):
 class CommonDispatchMixin(SimpleDispatchMixin):
     """Redispatches rawer calls into more useful ones."""
 
-    # TODO Complete.
-    #@handler("privmsg")
-    #def on_privmsg(self, cmd, target, text):
-    #    pass
+    # TODO: Complete
+    @handler("privmsg")
+    def dispatch_privmsg(self, cmd, target_name, text):
+        target = self.lookup_prefix(target_name)
+        if self == target:
+            pass # TODO Handle private queries.
+        else:
+            pass # TODO Handle public messages.
 
     @handler("nick")
     def update_own_nick(self, cmd, new_nick):
-        if cmd["source"] is self:
+        if self == cmd.source:
             self._nick = new_nick
 
     @handler("ping")

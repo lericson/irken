@@ -2,8 +2,8 @@
 # encoding: utf-8
 import unittest
 from irken.nicks import Mask
-from irken.base import Connection
-from irken.dispatch import CommonDispatchMixin, handler
+from irken.base import BaseConnection
+from irken.dispatch import CommonDispatchMixin, Command, handler
 from irken.encoding import EncodingMixin
 from irken.utils import AutoRegisterMixin
 
@@ -34,7 +34,7 @@ class TestConnectionMixin(object):
         return r
 
 bases = (AutoRegisterMixin, TestConnectionMixin, CommonDispatchMixin,
-         EncodingMixin, Connection)
+         EncodingMixin, BaseConnection)
 TestConnection = type("TestConnection", bases, {})
 
 class IrkenTestCase(unittest.TestCase):
@@ -111,19 +111,19 @@ class DispatchingTestCase(IrkenTestCase):
         m = Mask.from_string
         self.conn.recv_cmd(m("lericson"), "privmsg",
                            ("#toxik.fanclub", "Hello world!"))
+        cmd = Command(u"privmsg", source=self.conn.lookup_prefix("lericson"))
         self.conn.called.sort()
         self.assertEquals(self.conn.called,
-            [(1, {"source": m("lericson"), "command": "privmsg"},
-                 "#toxik.fanclub", "Hello world!"),
-             (2, {"source": m("lericson"), "command": "privmsg"},
-                 "#toxik.fanclub", "Hello world!")])
+            [(1, cmd, "#toxik.fanclub", "Hello world!"),
+             (2, cmd, "#toxik.fanclub", "Hello world!")])
 
     def test_multi_dispatch_notice(self):
-        self.conn.recv_cmd(None, "NOTICE", ("foo", "bar"))
+        self.conn.recv_cmd(None, "notice", ("foo", "bar"))
+        cmd = Command(u"notice", source=None)
         self.conn.called.sort()
         self.assertEquals(self.conn.called,
-            [(1, {"source": None, "command": "NOTICE"}, "foo", "bar"),
-             (2, {"source": None, "command": "NOTICE"}, "foo", "bar")])
+            [(1, cmd, "foo", "bar"),
+             (2, cmd, "foo", "bar")])
 
 if __name__ == "__main__":
     unittest.main()
