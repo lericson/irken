@@ -10,5 +10,6 @@ from irken.ctcp import CTCPDispatchMixin
 
 class Connection(CTCPDispatchMixin, AutoRegisterMixin, EncodingMixin,
                  SimpleSocketMixin, CommonDispatchMixin, BaseConnection): pass
+    client_version = "irken"
 
 from logging import basicConfig as logging, DEBUG as LOG_DEBUG

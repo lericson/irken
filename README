@@ -1,0 +1,16 @@
+irken is an IRC library for Python.
+
+I know -- "another one?" Yes. I have no arguments. This is me reinventing a
+wheel, and I think my skills are good enough to make a sufficiently improved
+wheel.
+
+Enunciation of the word "irken" isn't entirely obvious to non-North Germanic
+people. Well, to anybody who isn't Swedish I suppose.
+
+It's pronounced like "eer:khen" where the colon marks stress. That is to say,
+it's first a sound like the vowel in "eel", but combined with a rhotic sound,
+which isn't found in English at all, and then simply "ken".
+
+But I guess it's fine to say "irk" and then make it an ongoing type of thing
+with -en, like "She irkens me." But it's not how I (the namegiver) pronounce
+it.
