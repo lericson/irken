@@ -9,7 +9,7 @@ from irken.utils import AutoRegisterMixin
 from irken.ctcp import CTCPDispatchMixin
 
 class Connection(CTCPDispatchMixin, AutoRegisterMixin, EncodingMixin,
-                 SimpleSocketMixin, CommonDispatchMixin, BaseConnection): pass
+                 SimpleSocketMixin, CommonDispatchMixin, BaseConnection):
     client_version = "irken"
 
 from logging import basicConfig as logging, DEBUG as LOG_DEBUG
