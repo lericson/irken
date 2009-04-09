@@ -5,7 +5,6 @@ import os
 import re
 import urlparse
 import urllib2
-import asyncore
 
 from BeautifulSoup import BeautifulSoup
 
@@ -55,4 +54,4 @@ irken.logging(level=irken.LOG_DEBUG)
 bot = HardyNilsson(nick="hardy-nilsson",
                    autoregister=("hardy-nilsson", "Hardy Nilsson"))
 bot.connect(("irc.lericson.se", 6667))
-bot.run()
+bot.io.run_forever()
