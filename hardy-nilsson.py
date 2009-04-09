@@ -51,7 +51,6 @@ class HardyNilsson(irken.Connection):
         return BeautifulSoup(urllib2.urlopen(url)).title.string
 
 irken.logging(level=irken.LOG_DEBUG)
-bot = HardyNilsson(nick="hardy-nilsson",
-                   autoregister=("hardy-nilsson", "Hardy Nilsson"))
+bot = HardyNilsson(nick="hardy", autoregister=("hnilsson", "Hardy Nilsson"))
 bot.connect(("irc.lericson.se", 6667))
 bot.io.run_forever()
