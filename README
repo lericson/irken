@@ -14,3 +14,42 @@ which isn't found in English at all, and then simply "ken".
 But I guess it's fine to say "irk" and then make it an ongoing type of thing
 with -en, like "She irkens me." But it's not how I (the namegiver) pronounce
 it.
+
+Phonemically, it's something like [ɪr:kɛn].
+
+Architechturally, irken is mostly mixin-based. Though only to the extent that
+it makes sense.
+
+The base connection is built strictly built upon the parser and the nicks
+module, both of which are sort of core to irken. Basest of them all is actually
+nicks, because it handles the parsing of masks as well.
+
+    +--------+-------+
+    | parser | nicks |
+    +--------+-------+
+    |      base      |
+    +----------------+
+
+Beyond that, there are mixins for various things, all of which hook into the
+comand-receive and command-send chains of methods.
+
+The basic chain of calls is:
+
+    run -> io.receive -> consume -> parse_line -> recv_cmd
+
+As obvious, it's Connection.recv_cmd which triggers the rest of the system
+beyond simple network reads.
+
+In almost every actual use of irken, the dispatching system will be present.
+The dispatcher is a fairly simple construction which calls registered methods.
+
+The dispatcher is hooked into the chain by subclassing the connection, and
+mixing in the dispatch mixin. All the mixin in itself does is trigger the
+dispatching machinery whenever an IRC command is received.
+
+The encoding mixin decodes and encodes the IRC data, and hooks into both
+recv_cmd and send_cmd. Obviously you'd want to have the encoding mixin
+trigger before the dispatch mixin, and some code might even rely on it.
+
+Having a mixin structure does not imply not having dependencies between the
+mixins. For example, the CTCP mixin requires the dispatch mixin.
