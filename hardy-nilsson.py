@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# coding: utf-8
 """Jag heter Hardy. Hardy Nilsson."""
 
 import os
@@ -13,6 +14,17 @@ from irken.io import AsyncoreIO
 from irken.dispatch import handler
 
 class HardyNilsson(irken.Connection):
+    greeting = filter(None, map(lambda v: v.strip().decode("utf-8"),
+"""
+det här är min tredje vecka på fredagsbilagan.
+jag heter hardy. nilsson.
+jag gör recensioner va. indierecensioner.
+men jag har ju min egen tidning. mitt fanzine. common people.
+jag ser eh common people som arenarockens antites.
+common people är inte slitz.
+common people är inte tracks.
+common people är indie. indiepop.
+""".split("\n")))
     allowable_domains = "youtube.com", "php.net"
     url_re = re.compile(r"\b(https?://.+?\..+?/.+?)(?:$| )", re.I)
     make_io = lambda self: AsyncoreIO(consumer=self.consume)
@@ -25,6 +37,12 @@ class HardyNilsson(irken.Connection):
             rev = open(reffn, "U").read().rstrip("\n")
             rv += " (master is %s)" % rev
         return rv
+
+    @handler("irc cmd join")
+    def say_greeting(self, cmd, target_name):
+        if cmd.source == self:
+            for line in self.greeting:
+                self.send_cmd(None, "PRIVMSG", (target_name, line))
 
     @handler("irc cmd privmsg")
     def say_html_title(self, cmd, target_name, text):
