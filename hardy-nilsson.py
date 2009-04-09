@@ -50,4 +50,4 @@ irken.logging(level=irken.LOG_DEBUG)
 bot = HardyNilsson(nick="hardy-nilsson",
                    autoregister=("hardy-nilsson", "Hardy Nilsson"))
 bot.connect(("irc.lericson.se", 6667))
-bot.run_forever()
+bot.run()

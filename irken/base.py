@@ -13,6 +13,7 @@ class BaseConnection(object):
     """
 
     def __init__(self, nick):
+        self.io = self.make_io()
         self.nick = nick
         self._prefix_cache = {}
 
@@ -31,6 +32,10 @@ class BaseConnection(object):
             return self.nick == other.nick
         return NotImplemented
 
+    def connect(self, *args, **kwds):
+        """Connect to something. This is outsourced to io."""
+        return self.io.connect(*args, **kwds)
+
     def parse_line(self, line):
         return parse_line(line)
 
@@ -41,28 +46,15 @@ class BaseConnection(object):
         """Send an IRC command."""
         line = self.build_line(prefix, command, args)
         logger.debug("send " + repr(line))
-        self.send_raw(line + "\r\n")
-
-    def send_raw(self, line):
-        """Send raw IRC data.
-
-        This is what takes care of actually putting the data on the network.
-        """
-        raise NotImplementedError("io mixin")
+        self.io.send(line + "\r\n")
 
     def recv_cmd(self, prefix, command, args):
         """Receive an IRC command."""
         raise NotImplementedError("dispatch mixin")
 
-    def recv_raw(self):
-        """Read raw IRC data."""
-        raise NotImplementedError("io mixin")
-
-    def run_once(self):
-        self.recv_raw()
-
-    def run_forever(self):
-        while True: self.run_once()
+    def run(self):
+        while True:
+            self.io.receive(self.consume)
 
     def consume(self, data):
         """Consume every line in string *data*, returning any incomplete data
@@ -110,7 +102,9 @@ class BaseConnection(object):
 class RemoteSource(object):
     def __init__(self, prefix):
         self.nick = prefix[0] if prefix else prefix
-    def __repr__(self): return "<RemoteSource %r>" % (self.nick,)
+
+    def __repr__(self):
+        return "<RemoteSource %r>" % (self.nick,)
 
 if __name__ == "__main__":
     import doctest

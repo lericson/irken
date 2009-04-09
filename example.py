@@ -36,6 +36,5 @@ class ExampleBot(irken.Connection):
 
 irken.logging(level=irken.LOG_DEBUG)
 bot = ExampleBot(nick=NICKNAME, autoregister=(USERNAME, REALNAME))
-#bot.connect(ADDRNAME)
-bot.consume(":toxik PRIVMSG " + bot.nick + " :\x01VERSION\x01\n")
-#bot.run_forever()
+bot.connect(ADDRNAME)
+bot.run()
