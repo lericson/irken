@@ -1,14 +1,33 @@
 import socket
 
-class SimpleSocketIO(object):
+class BaseSocketIO(object):
     address_family = socket.AF_UNSPEC
     socket_type = socket.SOCK_STREAM
 
-    def __init__(self, *args, **kwds):
-        super(SimpleSocketIO, self).__init__(*args, **kwds)
+    def connect(self, address):
+        host, port = address
+        addresses = socket.getaddrinfo(host, port, self.address_family,
+                                       self.socket_type, 0, 0)
+        # TODO Attempt next somehow?
+        for af, st, prot, cnam, addr in addresses:
+            self.make_socket(af, st, prot)
+            self.connect_socket(addr)
+            break
+        else:
+            raise ValueError("no address found for %r" % (address,))
+        return addr
+
+class SimpleSocketIO(BaseSocketIO):
+    def __init__(self):
         self.in_buffer_segs = []
 
-    def send(self, data):
+    def make_socket(self, af, st, prot):
+        self.socket = socket.socket(af, st, prot)
+
+    def connect_socket(self, addr):
+        self.socket.connect(addr)
+
+    def deliver(self, data):
         self.socket.sendall(data)
 
     def receive(self, target):
@@ -36,27 +55,18 @@ class SimpleSocketIO(object):
         self.in_buffer_segs = [val]
     in_buffer = property(_in_buffer_get, _in_buffer_set)
 
-    def connect(self, address):
-        host, port = address
-        addresses = socket.getaddrinfo(host, port, self.address_family,
-                                       self.socket_type, 0, 0)
-        # TODO Attempt next somehow?
-        for af, st, prot, cnam, addr in addresses:
-            sock = socket.socket(af, st, prot)
-            sock.connect(addr)
-            self.socket = sock
-            break
-        return addr
-
+import asyncore
 import asynchat
 
-class AsyncoreIO(asynchat.async_chat):
+class AsyncoreIO(BaseSocketIO, asynchat.async_chat):
     address_family = socket.AF_UNSPEC
     socket_type = socket.SOCK_STREAM
 
-    def __init__(self, consumer, *args, **kwds):
-        asynchat.async_chat.__init__(self)
-        self.consumer = consumer
+    def __init__(self, *args, **kwds):
+        self.consumer = kwds.pop("consumer", None)
+        asynchat.async_chat.__init__(self, conn=kwds.pop("conn", None))
+        self.set_terminator("\n")
+        super(AsyncoreIO, self).__init__(*args, **kwds)
         self.in_buffer = []
 
     def collect_incoming_data(self, data):
@@ -65,6 +75,25 @@ class AsyncoreIO(asynchat.async_chat):
     def found_terminator(self):
         self.in_buffer = [self.consumer("".join(self.in_buffer))]
 
-    def connect(self, address):
-        self.create_socket(self.address_family, self.socket_type)
-        return asynchat.async_chat.connect(self, address)
+    def make_socket(self, af, st, prot):
+        # NOTE Can't use create_socket because I want my prot set.
+        self.socket = socket.socket(af, st, prot)
+        self.socket.setblocking(0)
+        self.set_socket(self.socket)
+
+    def connect_socket(self, address):
+        asynchat.async_chat.connect(self, address)
+
+    def deliver(self, data):
+        self.push(data)
+
+    def receive(self, target):
+        # This is sort of shady. :-)
+        self.consumer = target
+        self.run_forever()
+
+    def run_forever(self):
+        asyncore.loop()
+
+    def handle_error(self):
+        raise

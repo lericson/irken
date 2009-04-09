@@ -5,13 +5,18 @@ import os
 import re
 import urlparse
 import urllib2
+import asyncore
+
 from BeautifulSoup import BeautifulSoup
+
 import irken
+from irken.io import AsyncoreIO
 from irken.dispatch import handler
 
 class HardyNilsson(irken.Connection):
     allowable_domains = "youtube.com", "php.net"
     url_re = re.compile(r"\b(https?://.+?\..+?/.+?)(?:$| )", re.I)
+    make_io = lambda self: AsyncoreIO(consumer=self.consume)
 
     @property
     def client_version(self):

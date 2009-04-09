@@ -46,7 +46,7 @@ class BaseConnection(object):
         """Send an IRC command."""
         line = self.build_line(prefix, command, args)
         logger.debug("send " + repr(line))
-        self.io.send(line + "\r\n")
+        self.io.deliver(line + "\r\n")
 
     def recv_cmd(self, prefix, command, args):
         """Receive an IRC command."""
