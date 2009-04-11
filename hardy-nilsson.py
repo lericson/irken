@@ -68,7 +68,11 @@ common people är indie. indiepop.
     def _get_title(self, url):
         return BeautifulSoup(urllib2.urlopen(url)).title.string
 
-irken.logging(level=irken.LOG_DEBUG)
-bot = HardyNilsson(nick="hardy", autoregister=("hnilsson", "Hardy Nilsson"))
-bot.connect(("irc.lericson.se", 6667))
-bot.io.run_forever()
+def main(**opts):
+    from example import main as main_real
+    opts = dict(opts, nick="hardy", username="hnilsson", realname="Hardy Nilsson",
+                address=("irc.lericson.se", 6667))
+    return main_real(cls=HardyNilsson, **opts)
+
+if __name__ == "__main__":
+    main()

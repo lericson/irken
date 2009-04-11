@@ -2,11 +2,6 @@ import os
 import irken
 from irken.dispatch import handler
 
-NICKNAME = "irken-nick"
-USERNAME = "irken-user"
-REALNAME = "irken realname"
-ADDRNAME = "irc.lericson.se", 6667
-
 class ExampleBot(irken.Connection):
     @property
     def client_version(self):
@@ -34,7 +29,13 @@ class ExampleBot(irken.Connection):
         else:
             print "%04d <%s:%s> %s" % (count, src.nick, target.nick, text)
 
-irken.logging(level=irken.LOG_DEBUG)
-bot = ExampleBot(nick=NICKNAME, autoregister=(USERNAME, REALNAME))
-bot.connect(ADDRNAME)
-bot.run()
+def main(nick="irken-nick", username="irken-user", realname="irken realname",
+         address=("irc.lericson.se", 6667), log_level=irken.LOG_DEBUG,
+         cls=ExampleBot):
+    irken.logging(level=log_level)
+    bot = cls(nick=nick, autoregister=(username, realname))
+    bot.connect(address)
+    bot.run()
+
+if __name__ == "__main__":
+    main()

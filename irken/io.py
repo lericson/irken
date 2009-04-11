@@ -144,12 +144,17 @@ class AsyncoreIO(BaseSocketIO, asynchat.async_chat):
         self.push(data)
 
     def receive(self, target):
-        # This is sort of shady. :-)
-        self.consumer = target
-        self.run_forever()
+        # This is sort of shady. :-) Switcheroo anyway.
+        prev, self.consumer = self.consumer, target
+        self.run_once(count=1)
+        self.consumer = prev
 
-    def run_forever(self):
-        asyncore.loop()
+    def run(self, consumer):
+        self.consumer = consumer
+        self.run_once()
+
+    def run_once(self, **kwds):
+        asyncore.loop(**kwds)
 
     def handle_error(self):
         raise

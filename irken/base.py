@@ -77,13 +77,31 @@ class BaseConnection(object):
         This default implementation does nothing smart, it's more of a factory
         with a cache than anything else. (Which means it wastes memory, yeah.)
 
-        >>> bc = BaseConnection("self")
+        RemoteSource is used for unknowns, which is created through
+        self.make_source. (So look there if you want to change stuff.)
+
+        >>> from irken.tests import TestConnection
+        >>> bc = TestConnection("self")
         >>> bc.lookup_prefix(("other",))
-        <RemoteSource 'other'>
-        >>> bc.lookup_prefix(("self",))  # doctest: +ELLIPSIS
-        <__main__.BaseConnection object at ...>
+        <RemoteSource ('other',)>
+
+        Though, if the mask looked up matches the instance's own nickname, then
+        self is returned:
+
+        >>> bc.lookup_prefix(("self",)) is bc
+        True
+
+        This is actually used for channels and other things as well (server
+        names most notably), and a "source" is a very vague term by intent.
+
         >>> bc.lookup_prefix(("#im.a.channel",))
-        <RemoteSource '#im.a.channel'>
+        <RemoteSource ('#im.a.channel',)>
+
+        Regularly, this will be running on mask instances:
+
+        >>> from irken.nicks import Mask
+        >>> bc.lookup_prefix(Mask.from_string("self!foo@bar")) is bc
+        True
         """
         # TODO There really should be some eviction strategy for entries in the
         # cache, but hey... Realistically, I can leak that memory.
@@ -100,14 +118,16 @@ class BaseConnection(object):
         return RemoteSource(prefix)
 
 class RemoteSource(object):
+    __slots__ = "mask", "nick"
     make_mask = Mask.from_string
 
     def __init__(self, mask):
         self.mask = mask
+        # Could be a property, but it isn't.
         self.nick = mask[0] if mask else mask
 
     def __repr__(self):
-        return "<RemoteSource %r (%r)>" % (self.nick, self.mask)
+        return "<RemoteSource %r>" % (self.mask,)
 
 if __name__ == "__main__":
     import doctest
