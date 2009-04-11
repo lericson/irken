@@ -52,9 +52,9 @@ class BaseConnection(object):
         """Receive an IRC command."""
         raise NotImplementedError("dispatch mixin")
 
-    def run(self):
-        while True:
-            self.io.receive(self.consume)
+    def run(self, *args, **kwds):
+        kwds.setdefault("consumer", self.consume)
+        return self.io.run(*args, **kwds)
 
     def consume(self, data):
         """Consume every line in string *data*, returning any incomplete data
