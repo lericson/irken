@@ -1,6 +1,6 @@
 import logging
 from irken.parser import parse_line, build_line
-from irken.nicks import nickname
+from irken.nicks import Mask, nickname
 
 logger = logging.getLogger("irken.base")
 
@@ -100,11 +100,14 @@ class BaseConnection(object):
         return RemoteSource(prefix)
 
 class RemoteSource(object):
-    def __init__(self, prefix):
-        self.nick = prefix[0] if prefix else prefix
+    make_mask = Mask.from_string
+
+    def __init__(self, mask):
+        self.mask = mask
+        self.nick = mask[0] if mask else mask
 
     def __repr__(self):
-        return "<RemoteSource %r>" % (self.nick,)
+        return "<RemoteSource %r (%r)>" % (self.nick, self.mask)
 
 if __name__ == "__main__":
     import doctest
