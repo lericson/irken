@@ -1,3 +1,16 @@
+from irken.nicks import nickname
+
+class NicknameMixin(object):
+    def _set_nick(self, value):
+        value = nickname(value)
+        if hasattr(self, "_nick"):
+            if value != self.nick:
+                self.send_cmd(None, "NICK", (value,))
+        else:
+            self._nick = value
+    def _get_nick(self): return getattr(self, "_nick", "*")
+    nick = property(_get_nick, _set_nick)
+    
 class AutoRegisterMixin(object):
     def __init__(self, *args, **kwds):
         if "autoregister" in kwds:

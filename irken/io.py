@@ -1,6 +1,12 @@
+class BaseIO(object):
+    def connect(self): raise NotImplementedError
+    def deliver(self, data): raise NotImplementedError
+    def receive(self, consumer): raise NotImplementedError
+    def run(self): raise NotImplementedError
+
 import socket
 
-class BaseSocketIO(object):
+class BaseSocketIO(BaseIO):
     address_family = socket.AF_UNSPEC
     socket_type = socket.SOCK_STREAM
 

@@ -1,6 +1,6 @@
 import logging
+from irken.nicks import Mask
 from irken.parser import parse_line, build_line
-from irken.nicks import Mask, nickname
 
 logger = logging.getLogger("irken.base")
 
@@ -17,15 +17,9 @@ class BaseConnection(object):
         self.nick = nick
         self._prefix_cache = {}
 
-    def _set_nick(self, value):
-        value = nickname(value)
-        if hasattr(self, "_nick"):
-            if value != self.nick:
-                self.send_cmd(None, "NICK", (value,))
-        else:
-            self._nick = value
-    def _get_nick(self): return getattr(self, "_nick", "*")
-    nick = property(_get_nick, _set_nick)
+    @property
+    def mask(self):
+        return Mask(self.nick)
 
     def __eq__(self, other):
         if hasattr(other, "nick"):
@@ -118,9 +112,6 @@ class BaseConnection(object):
         return RemoteSource(prefix)
 
 class RemoteSource(object):
-    __slots__ = "mask", "nick"
-    make_mask = Mask.from_string
-
     def __init__(self, mask):
         self.mask = mask
         # Could be a property, but it isn't.

@@ -87,7 +87,7 @@ class Command(unicode):
 
 # irken mixins
 
-class SimpleDispatchMixin(DispatchRegistering):
+class BaseDispatchMixin(DispatchRegistering):
     """Dispatches received commands to specified methods."""
 
     def recv_cmd(self, prefix, command, args):
@@ -107,10 +107,7 @@ class SimpleDispatchMixin(DispatchRegistering):
     def handle_default_command(self, name, cmd, *args):
         raise UnhandledCommandError(cmd)
 
-    #def handle_error(self):
-    #    logger.exception("command dispatch")
-
-class CommonDispatchMixin(SimpleDispatchMixin):
+class CommonDispatchMixin(BaseDispatchMixin):
     """Redispatches rawer calls into more useful ones."""
 
     # TODO: Complete
